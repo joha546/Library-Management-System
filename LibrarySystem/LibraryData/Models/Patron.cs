@@ -1,4 +1,6 @@
-﻿using System;
+﻿// LibraryData/Models/Patron.cs
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace LibraryData.Models
 {
-    internal class Patron
+    public class Patron
     {
         public int Id { get; set; }
         public string FirstName { get; set; }
