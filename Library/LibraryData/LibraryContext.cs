@@ -20,12 +20,5 @@ namespace LibraryData
         public DbSet<LibraryAsset> LibraryAssets { get; set; }
         public DbSet<Hold> Holds { get; set; }
 
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            base.OnModelCreating(modelBuilder);
-
-            // Marking the Video entity as keyless entity
-            modelBuilder.Entity<Video>().HasNoKey();
-        }
     }
 }

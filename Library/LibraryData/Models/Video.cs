@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace LibraryData.Models
 {
-    public class Video
+    public class Video : LibraryAsset
     {
         [Required]
         public string Director { get; set; }
