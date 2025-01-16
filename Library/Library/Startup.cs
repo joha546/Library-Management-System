@@ -30,6 +30,7 @@ namespace Library
             // Dependency Injection.
             services.AddScoped<ILibraryAsset, LibraryAssetService>();  // LibraryAssetService is going to inject in catalog service any time.
             // and it is requesting our ILibraryAsset Interface.
+            services.AddScoped<ICheckout, CheckoutService>();
 
             services.AddDbContext<LibraryContext>(options => options.UseSqlServer(Configuration.GetConnectionString("LibraryConnection")));
         }

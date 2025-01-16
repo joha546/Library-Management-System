@@ -2,6 +2,8 @@
 using LibraryData;
 using System.Linq;
 using Library.Models.Catalog;
+using Microsoft.AspNetCore.Authorization.Infrastructure;
+
 
 namespace Library.Controllers
 {
@@ -32,6 +34,29 @@ namespace Library.Controllers
             var model = new AssetIndexListingModel()
             {
                 Assets = listingResult
+            };
+            return View(model);
+        }
+
+        public IActionResult Detail(int Id)
+        {
+            // we need to show a particular asset by their id.
+            var asset = _assets.GetById(Id);
+
+            // Domain Model.
+            var model = new AssetDetailModel
+            {
+                AssetId = Id,
+                Title = asset.Title,
+                Year = asset.Year,
+                Cost = asset.Cost,
+                Status = asset.Status.Name,
+                ImageUrl = asset.ImageUrl,
+                AuthorOrDirector = _assets.GetAuthorOrDirector(Id),
+                CurrectLocation = _assets.GetCurrentLocation(Id).Name,
+                DeweyCallNumber = _assets.GetDeweyIndex(Id),
+                ISBN = _assets.GetIsbn(Id),
+
             };
             return View(model);
         }
