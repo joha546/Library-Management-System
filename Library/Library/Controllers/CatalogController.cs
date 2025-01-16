@@ -17,6 +17,7 @@ namespace Library.Controllers
         public IActionResult Index()
         {
             var assetModels = _assets.GetAll();
+
             var listingResult = assetModels
                 .Select(result => new AssetIndexListingModel       // our custom view model.
                 {

@@ -1,4 +1,6 @@
-﻿namespace Library.Models.Catalog
+﻿using System.Collections.Generic;
+
+namespace Library.Models.Catalog
 {
     public class AssetIndexListingModel
     {
@@ -10,7 +12,6 @@
         public string Type { get; set; }
         public string DeweyCallNumber { get; set; }
         public string NumberOfCopies { get; set; }
-
-
+        public IEnumerable<AssetIndexListingModel> Assets { get; internal set; }
     }
 }
