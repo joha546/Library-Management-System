@@ -193,7 +193,7 @@ namespace LibraryServices
             return now.AddDays(30);
         }
 
-        private bool IsCheckedOut(int assetId)
+        public bool IsCheckedOut(int assetId)
         {
             var isCheckedOut = _context.Checkouts
                 .Where(co => co.LibraryAsset.Id == assetId)
@@ -257,7 +257,27 @@ namespace LibraryServices
 
         public string GetCurrentCheckoutPatron(int assetId)
         {
-            throw new NotImplementedException();
+            var checkout = GetCheckoutByAssetId(assetId);
+            if (checkout == null || checkout.LibraryCard == null)
+            {
+                return "";
+            }
+
+            var cardId = checkout.LibraryCard.Id;
+
+            var patron = _context.Patrons
+                .Include(p => p.LibraryCard)
+                .FirstOrDefault(p => p.LibraryCard.Id == cardId);
+
+            return patron?.FirstName + " " + patron?.LastName;
+        }
+
+        private Checkout GetCheckoutByAssetId(int assetId)
+        {
+            return _context.Checkouts
+                .Include(co => co.LibraryAsset)
+                .Include(co => co.LibraryCard)
+                .FirstOrDefault(co => co.LibraryAsset.Id == assetId);
         }
     }
 }

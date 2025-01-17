@@ -3,6 +3,7 @@ using LibraryData;
 using System.Linq;
 using Library.Models.Catalog;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
+using Library.Models.CheckoutModels;
 
 
 namespace Library.Controllers
@@ -10,10 +11,12 @@ namespace Library.Controllers
     public class CatalogController : Controller
     {
         private ILibraryAsset _assets;
-        public CatalogController(ILibraryAsset assets) 
+        private ICheckout _checkouts;
+        public CatalogController(ILibraryAsset assets, ICheckout checkouts) 
         {
             // constructor to keep data private.
             _assets = assets;
+            _checkouts = checkouts;
         }
 
         public IActionResult Index()
@@ -38,27 +41,97 @@ namespace Library.Controllers
             return View(model);
         }
 
-        public IActionResult Detail(int Id)
+        public IActionResult Detail(int id)
         {
             // we need to show a particular asset by their id.
-            var asset = _assets.GetById(Id);
+            var asset = _assets.GetById(id);
 
+            var currentHolds = _checkouts.GetCurrentHolds(id)
+                .Select(a => new AssetHoldModel
+                {
+                    HoldPlaced = _checkouts.GetCurrentHoldPlaced(a.Id).ToString("d"),
+                    PatronName = _checkouts.GetCurrentHoldPatronName(a.Id)
+                });
             // Domain Model.
             var model = new AssetDetailModel
             {
-                AssetId = Id,
+                AssetId = id,
                 Title = asset.Title,
+                Type = _assets.GetType(id),
                 Year = asset.Year,
                 Cost = asset.Cost,
                 Status = asset.Status.Name,
                 ImageUrl = asset.ImageUrl,
-                AuthorOrDirector = _assets.GetAuthorOrDirector(Id),
-                CurrectLocation = _assets.GetCurrentLocation(Id).Name,
-                DeweyCallNumber = _assets.GetDeweyIndex(Id),
-                ISBN = _assets.GetIsbn(Id),
+                AuthorOrDirector = _assets.GetAuthorOrDirector(id),
+                CurrectLocation = _assets.GetCurrentLocation(id).Name,
+                Dewey = _assets.GetDeweyIndex(id),
+                CheckoutHistory = _checkouts.GetCheckoutHistories(id),
+                ISBN = _assets.GetIsbn(id),
+                LatestCheckOut = _checkouts.GetLatestCheckout(id),
+                PatronName = _checkouts.GetCurrentCheckoutPatron(id),
+                CurrentHolds = currentHolds
 
             };
             return View(model);
+        }
+
+        public IActionResult Checkout(int id)
+        {
+            var asset = _assets.GetById(id);
+
+            var model = new CheckoutModel
+            {
+                AssetId = id,
+                Title = asset.Title,
+                ImageUrl = asset.ImageUrl,
+                LibraryCardId = "",
+                IsCheckedOut = _checkouts.IsCheckedOut(id),
+            };
+
+            return View(model);
+        }
+
+        public IActionResult Hold(int id)
+        {
+            var asset = _assets.GetById(id);
+
+            var model = new CheckoutModel
+            {
+                AssetId = id,
+                Title = asset.Title,
+                ImageUrl = asset.ImageUrl,
+                LibraryCardId = "",
+                IsCheckedOut = _checkouts.IsCheckedOut(id),
+                HoldCount = _checkouts.GetCurrentHolds(id).Count()
+            };
+
+            return View(model);
+        }
+
+        public IActionResult MarkLost(int assetId) 
+        {
+            _checkouts.MarkLost(assetId);
+            return RedirectToAction("Detail", new {id = assetId});
+        }
+
+        public IActionResult MarkFound(int assetId)
+        {
+            _checkouts.MarkFound(assetId);
+            return RedirectToAction("Detail", new { id = assetId });
+        }
+
+        [HttpPost]
+        public IActionResult PlaceCheckout(int assetId, int libraryCard)
+        {
+            _checkouts.CheckOutItem(assetId, libraryCard);
+            return RedirectToAction("Detail", new {id = assetId});
+        }
+
+        [HttpPost]
+        public IActionResult PlaceHold(int assetId, int libraryCard)
+        {
+            _checkouts.PlaceHold(assetId, libraryCard);
+            return RedirectToAction("Detail", new { id = assetId });
         }
     }
 }
