@@ -12,8 +12,6 @@ namespace LibraryServices
     public class CheckoutService : ICheckout
     {
         protected LibraryContext _context;
-
-        //constructor.
         public CheckoutService(LibraryContext context)
         {
             _context = context;
@@ -26,7 +24,7 @@ namespace LibraryServices
 
         public IEnumerable<Checkout> GetAll()
         {
-            return _context.Checkouts;
+           return _context.Checkouts;
         }
 
         public Checkout GetById(int checkoutId)
@@ -43,7 +41,6 @@ namespace LibraryServices
                 .Where(h => h.LibrarysAsset.Id == id);
         }
 
-
         public IEnumerable<Hold> GetCurrentHolds(int id)
         {
             return _context.Holds
@@ -51,82 +48,216 @@ namespace LibraryServices
                 .Where(h => h.LibrarysAsset.Id == id);
         }
 
-        public Checkout GetLatestCheckout(int assetid)
+        public Checkout GetLatestCheckout(int assetId)
         {
             return _context.Checkouts
-                .Where(c => c.LibraryAsset.Id == assetid)
+                .Where(c => c.LibraryCard.Id == assetId)
                 .OrderByDescending(c => c.Since)
                 .FirstOrDefault();
         }
-
-        public void MarkFound(int assetid)
+        public void MarkFound(int assetId)
         {
             var now = DateTime.Now;
+
+            UpdateAssetStatus(assetId, "Available");
+            // remove any existing checkouts on the item
+            RemoveExistingCheckouts(assetId);
+            // close any existing checkout history.
+            CloseExistingCheckoutHistory(assetId, now);
+
+            _context.SaveChanges();
+        }
+
+        private void UpdateAssetStatus(int assetId, string v)
+        {
             var item = _context.LibraryAssets
-                .FirstOrDefault(a => a.Id == assetid);
+               .FirstOrDefault(a => a.Id == assetId);
 
             _context.Update(item);
+
             item.Status = _context.Statuses
                 .FirstOrDefault(status => status.Name == "Available");
+        }
 
-            // remove any existing checkouts on the item.
-            var checkout = _context.Checkouts
-                .FirstOrDefault(co => co.LibraryAsset.Id == assetid);
-            if (checkout != null)
-            {
-                _context.Remove(checkout);
-            }
-
-            // close any existing checkout history.
+        private void CloseExistingCheckoutHistory(int assetId, DateTime now)
+        {
             var history = _context.CheckoutHistories
-                .FirstOrDefault(h => h.LibrarysAsset.Id == assetid && h.CheckedIn == null);
+                .FirstOrDefault(h => h.LibrarysAsset.Id == assetId
+                && h.CheckedIn == null);
 
             if (history != null)
             {
                 _context.Update(history);
                 history.CheckedIn = now;
             }
-            _context.SaveChanges();
 
-            // we can refactor this methods by implementing these operations into three functions like-
-            // RemoveExistingCheckout , CloseExistingCheckoutHistory, UpdateAssetStatus.
         }
 
-        public void MarkLost(int assetid)
+        private void RemoveExistingCheckouts(int assetId)
         {
-            // updating a library asset status just from available to not available.
-            var item = _context.LibraryAssets
-                .FirstOrDefault(a => a.Id == assetid);
+            var checkout = _context.Checkouts
+                .FirstOrDefault(co => co.LibraryAsset.Id == assetId);
 
-            _context.Update(item);
-            item.Status = _context.Statuses
-                .FirstOrDefault(status => status.Name == "Lost");
+            if (checkout != null)
+            {
+                _context.Remove(checkout);
+            }
+        }
+
+        public void MarkLost(int assetId)
+        {
+            UpdateAssetStatus(assetId, "Lost");
 
             _context.SaveChanges();
-            
         }
         public void CheckInItem(int assetId, int libraryCardId)
         {
-            throw new NotImplementedException();
+            var now = DateTime.Now;
+            var item = _context.LibraryAssets
+                .FirstOrDefault(a => a.Id == assetId);
+            
+            // remove any existing checkouts on the item
+            RemoveExistingCheckouts(assetId);
+            // close any existing checkout history
+            CloseExistingCheckoutHistory(assetId, now);
+            // look for existing holds on the item
+            var currentHolds = _context.Holds
+                .Include(h => h.LibrarysAsset)
+                .Include(h => h.LibraryCard)
+                .Where(h => h.LibrarysAsset.Id == assetId);
+            // if there are holds, chckout the item to the library card with their earliest hold.
+            if (currentHolds.Any())
+            {
+                CheckoutToEarliestHold(assetId, currentHolds);
+            }
+            // otherwise, update the item status to available.
+
+            UpdateAssetStatus(assetId, "Available");
+
+            _context.SaveChanges();
+        }
+
+        private void CheckoutToEarliestHold(int assetId, IQueryable<Hold> currentHolds)
+        {
+            var earliestHold = currentHolds
+                .OrderBy(holds => holds.HoldPlaced)
+                .FirstOrDefault();
+
+            var card = earliestHold.LibraryCard;
+
+            _context.Remove(earliestHold);
+            _context.SaveChanges();
+            CheckOutItem(assetId, card.Id);
         }
 
         public void CheckOutItem(int assetId, int libraryCardId)
         {
-            throw new NotImplementedException();
-        }
-        public void PlaceHold(int assetid, int libraryCardId)
-        {
-            throw new NotImplementedException();
-        }
-        public string GetCurrentHoldPatronName(int id)
-        {
-            throw new NotImplementedException();
+            var now = DateTime.Now;
+            if (IsCheckedOut(assetId))
+            {
+                return;
+                //Add logic to handle feedback to the user.
+            }
+
+            var item = _context.LibraryAssets
+                .FirstOrDefault(a => a.Id == assetId);
+
+            UpdateAssetStatus(assetId, "Checked Out");
+
+            var libraryCard = _context.LibraryCards
+                .Include(card => card.Checkouts)
+                .FirstOrDefault(card => card.Id == libraryCardId);
+
+            var checkout = new Checkout
+            {
+                LibraryAsset = item,
+                LibraryCard = libraryCard,
+                Since = now,
+                Until = GetDefaultCheckoutTime(now)
+            };
+            _context.Add(checkout);
+
+            var checkoutHistory = new CheckoutHistory
+            {
+                CheckedOut = now,
+                LibrarysAsset = item,
+                LibraryCard = libraryCard
+            };
+
+            _context.Add(checkoutHistory);
+            _context.SaveChanges();
         }
 
-        public DateTime GetCurrentHoldPlaced(int id)
+        private DateTime GetDefaultCheckoutTime(DateTime now)
+        {
+            return now.AddDays(30);
+        }
+
+        private bool IsCheckedOut(int assetId)
+        {
+            var isCheckedOut = _context.Checkouts
+                .Where(co => co.LibraryAsset.Id == assetId)
+                .Any();
+
+            return isCheckedOut;
+        }
+
+        public void PlaceHold(int assetId, int libraryCardId)
+        {
+            var now = DateTime.Now;
+
+            var asset = _context.LibraryAssets
+                .FirstOrDefault(a => a.Id == assetId);
+
+            var card = _context.LibraryCards
+                .FirstOrDefault(c => c.Id == libraryCardId);
+
+            if(asset.Status.Name == "Available")
+            {
+                UpdateAssetStatus(assetId, "On Hold");
+            }
+
+            var hold = new Hold
+            {
+                HoldPlaced = now,
+                LibrarysAsset = asset,
+                LibraryCard = card
+            };
+
+            _context.Add(hold);
+            _context.SaveChanges();
+        }
+
+        public string GetCurrentHoldPatronName(int holdId)
+        {
+            var hold = _context.Holds
+                .Include(h => h.LibrarysAsset)
+                .Include(h => h.LibraryCard)
+                .FirstOrDefault(h => h.Id == holdId);
+
+            var cardId = hold?.LibraryCard.Id;
+
+            var patron = _context.Patrons
+                .Include(p => p.LibraryCard)
+                .FirstOrDefault(p => p.LibraryCard.Id == cardId);
+
+            return patron?.FirstName + " " + patron?.LastName;
+        }
+
+        public DateTime GetCurrentHoldPlaced(int holdId)
+        {
+            var hold = _context.Holds
+                .Include(h => h.LibrarysAsset)
+                .Include(h => h.LibraryCard)
+                .FirstOrDefault(h => h.Id == holdId)
+                .HoldPlaced;
+
+            return hold;
+        }
+
+        public string GetCurrentCheckoutPatron(int assetId)
         {
             throw new NotImplementedException();
-
         }
     }
 }
