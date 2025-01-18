@@ -69,3 +69,15 @@ body {
   white-space: nowrap;
   line-height: 60px; /* Vertically center the text there */
 }
+
+#catalog{
+    background: url('/images/catalog.jpeg') bottom right 15% no-repeat #555;
+}
+
+#patrons {
+    background: url('/images/patrons.jpeg') bottom right 15% no-repeat #555;
+}
+
+#branches {
+    background: url('/images/branches.jpeg') bottom right 15% no-repeat #555;
+}
