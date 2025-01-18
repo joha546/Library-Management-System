@@ -115,6 +115,7 @@ namespace LibraryServices
             var now = DateTime.Now;
             var item = _context.LibraryAssets
                 .FirstOrDefault(a => a.Id == assetId);
+
             
             // remove any existing checkouts on the item
             RemoveExistingCheckouts(assetId);
@@ -195,11 +196,10 @@ namespace LibraryServices
 
         public bool IsCheckedOut(int assetId)
         {
-            var isCheckedOut = _context.Checkouts
+            return _context.Checkouts
                 .Where(co => co.LibraryAsset.Id == assetId)
                 .Any();
 
-            return isCheckedOut;
         }
 
         public void PlaceHold(int assetId, int libraryCardId)
@@ -246,13 +246,12 @@ namespace LibraryServices
 
         public DateTime GetCurrentHoldPlaced(int holdId)
         {
-            var hold = _context.Holds
+            return _context.Holds
                 .Include(h => h.LibrarysAsset)
                 .Include(h => h.LibraryCard)
                 .FirstOrDefault(h => h.Id == holdId)
                 .HoldPlaced;
 
-            return hold;
         }
 
         public string GetCurrentCheckoutPatron(int assetId)

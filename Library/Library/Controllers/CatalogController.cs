@@ -85,7 +85,7 @@ namespace Library.Controllers
                 Title = asset.Title,
                 ImageUrl = asset.ImageUrl,
                 LibraryCardId = "",
-                IsCheckedOut = _checkouts.IsCheckedOut(id),
+                IsCheckedOut = _checkouts.IsCheckedOut(id)
             };
 
             return View(model);
@@ -121,16 +121,16 @@ namespace Library.Controllers
         }
 
         [HttpPost]
-        public IActionResult PlaceCheckout(int assetId, int libraryCard)
+        public IActionResult PlaceCheckout(int assetId, int libraryCardId)
         {
-            _checkouts.CheckOutItem(assetId, libraryCard);
+            _checkouts.CheckOutItem(assetId, libraryCardId);
             return RedirectToAction("Detail", new {id = assetId});
         }
 
         [HttpPost]
-        public IActionResult PlaceHold(int assetId, int libraryCard)
+        public IActionResult PlaceHold(int assetId, int libraryCardId)
         {
-            _checkouts.PlaceHold(assetId, libraryCard);
+            _checkouts.PlaceHold(assetId, libraryCardId);
             return RedirectToAction("Detail", new { id = assetId });
         }
     }
