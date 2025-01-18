@@ -68,7 +68,7 @@ namespace LibraryServices
             _context.SaveChanges();
         }
 
-        private void UpdateAssetStatus(int assetId, string v)
+        private void UpdateAssetStatus(int assetId, string newStatus)
         {
             var item = _context.LibraryAssets
                .FirstOrDefault(a => a.Id == assetId);
@@ -76,7 +76,7 @@ namespace LibraryServices
             _context.Update(item);
 
             item.Status = _context.Statuses
-                .FirstOrDefault(status => status.Name == "Available");
+                .FirstOrDefault(status => status.Name == newStatus);
         }
 
         private void CloseExistingCheckoutHistory(int assetId, DateTime now)
@@ -110,7 +110,7 @@ namespace LibraryServices
 
             _context.SaveChanges();
         }
-        public void CheckInItem(int assetId, int libraryCardId)
+        public void CheckInItem(int assetId)
         {
             var now = DateTime.Now;
             var item = _context.LibraryAssets
@@ -130,6 +130,7 @@ namespace LibraryServices
             if (currentHolds.Any())
             {
                 CheckoutToEarliestHold(assetId, currentHolds);
+                return;
             }
             // otherwise, update the item status to available.
 
@@ -207,6 +208,7 @@ namespace LibraryServices
             var now = DateTime.Now;
 
             var asset = _context.LibraryAssets
+                .Include(a => a.Status)
                 .FirstOrDefault(a => a.Id == assetId);
 
             var card = _context.LibraryCards
